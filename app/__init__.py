@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from .extensions import db, login_manager
+from .extensions import db, login_manager,migrate
 from flask_admin import Admin
 from .models import User
 from .blueprints.public.routes import public_bp
@@ -17,6 +17,7 @@ def create_app():
     app.config.from_object(Config())
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     # Blueprints
