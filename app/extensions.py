@@ -1,10 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_admin import Admin
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message_category = "warning"
+migrate = Migrate()
 
 admin = Admin(name="Department CMS", template_mode="bootstrap4",url="/admin")
