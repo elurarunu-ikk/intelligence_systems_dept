@@ -165,7 +165,7 @@ class GalleryImage(db.Model, TimestampMixin):
     image_url = db.Column(db.String(500), nullable=False)
     caption = db.Column(db.String(255), default="", nullable=True)
 
-    album = db.relationship("GalleryAlbum", backref=db.backref("images", lazy=True))
+    album = db.relationship("GalleryAlbum", backref=db.backref("images", lazy=True,order_by="GalleryImage.id.asc()"))
 
 class Alumni(db.Model, TimestampMixin):
     id = db.Column(db.Integer, primary_key=True)
