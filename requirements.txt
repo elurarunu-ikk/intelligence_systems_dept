@@ -8,3 +8,5 @@ WTForms==2.3.3
 gunicorn
 Pillow
 waitress
+psycopg2-binary
+Flask-Migrate
