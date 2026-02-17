@@ -61,6 +61,8 @@ def setup_admin(admin):
     admin.add_view(GalleryImageView(GalleryImage, db.session, category="Media"))
  
    # admin.add_view(SecureModelView(Alumni, db.session, category="People"))
+   
+
 
 import os
 from flask import current_app, url_for
@@ -176,3 +178,14 @@ class SiteSettingsAdmin(SecureModelView):
         rules.Header("Contact"),
         "enquiry_email","phone","address",
     )
+
+class NewsView(SecureModelView):
+    def on_model_change(self, form, model, is_created):
+        if model.cover_image_url:
+            v = str(model.cover_image_url).strip().replace("\\", "/")
+            if v and not v.startswith("/"):
+                v = "/" + v
+            model.cover_image_url = v
+        super().on_model_change(form, model, is_created)
+
+
