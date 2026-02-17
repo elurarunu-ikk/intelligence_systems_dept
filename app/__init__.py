@@ -6,7 +6,7 @@ from .models import User
 from .blueprints.public.routes import public_bp
 from .blueprints.auth.routes import auth_bp
 from .admin_views import setup_admin,SecureAdminIndexView
-from .configbackup import Config
+from .config import Config
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
