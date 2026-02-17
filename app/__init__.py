@@ -6,7 +6,7 @@ from .models import User
 from .blueprints.public.routes import public_bp
 from .blueprints.auth.routes import auth_bp
 from .admin_views import setup_admin,SecureAdminIndexView
-from .config import Config
+from .configbackup import Config
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -48,11 +48,16 @@ def create_app():
 
 
 def _seed_admin_user(app: Flask):
-    # Create a default admin account only if none exist (safe to run repeatedly)
-    if User.query.count() == 0:
-        email = app.config.get("ADMIN_EMAIL", "admin@saveetha.edu.in")
-        password = app.config.get("ADMIN_PASSWORD", "ChangeMe@123")
-        user = User(email=email, is_admin=True)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
+    email = app.config.get("ADMIN_EMAIL", "admin@saveetha.edu.in")
+    password = app.config.get("ADMIN_PASSWORD", "ChangeMe@123")
+
+    # ✅ Seed only if that admin email is missing
+    exists = User.query.filter_by(email=email).first()
+    if exists:
+        return
+
+    user = User(email=email, is_admin=True)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+

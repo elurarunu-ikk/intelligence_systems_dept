@@ -1,0 +1,240 @@
+Given your numbers (1–2 admins, ~50 visitors/day, occasional updates), you *can* run with SQLite **if** you host on a **single server with persistent storage + backups**. The reason you ran into trouble on Render free is that it’s an **ephemeral filesystem** (no disk), so SQLite data can vanish on deploy/restart. For a “micro department” site, the simplest “production” choices are:
+
+## Recommended production options (simple)
+
+### Option A — Single VPS + SQLite (very simple, works for your load)
+
+Best when you want low cost + full control.
+
+* Ubuntu VPS (DigitalOcean/Lightsail/Hetzner/etc.)
+* Nginx + Gunicorn
+* SQLite stored in `/var/www/.../instance/site.db`
+* Daily backup (automatic)
+
+? Pros: simplest, cheap, stable for low traffic
+?? Cons: you manage server + backups
+
+### Option B — VPS + Postgres (still simple, more robust)
+
+Same server setup, but database is Postgres.
+? Pros: safer long-term, easy scaling
+?? Cons: slightly more setup
+
+### Option C — Render Paid + Disk + SQLite
+
+Very easy, but paid. Works fine for your scale.
+? Pros: no server admin headaches
+?? Cons: cost
+
+For your case, **Option A** is totally reasonable.
+
+---
+
+# Visitor count in footer (yes, doable)
+
+You can add a simple visitor counter. Two approaches:
+
+## 1) Simple “page views” counter (recommended)
+
+Counts total visits to your site. For 50/day, it’s perfect.
+
+**DB table**: `site_metrics` or `page_views`
+
+* `total_views` (integer)
+* optionally `daily_views` (date, count)
+
+Increment it in `before_request` or just for selected pages.
+
+### Minimal approach (total views)
+
+* Increment only when:
+
+  * request is GET
+  * not admin/auth route
+  * not static
+* Display in footer: “Visitors: 12,345”
+
+This adds a DB write each visit. At 50/day it’s fine.
+
+## 2) External analytics (no DB writes)
+
+Use:
+
+* Google Analytics
+* Cloudflare Web Analytics
+* Plausible (paid)
+  Better for accuracy, but you asked to **display in footer**, so DB counter is better.
+
+---
+
+# Production deployment gist (VPS + Nginx + Gunicorn + SQLite)
+
+This is the clean “copy & follow” plan.
+
+## 1) Server setup
+
+* Ubuntu 22.04
+* Install:
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-pip nginx
+```
+
+## 2) Upload code
+
+Clone from GitHub:
+
+```bash
+cd /var/www
+sudo git clone https://github.com/<your-org>/<repo>.git intelligence_systems_site
+cd intelligence_systems_site
+```
+
+Create venv + install:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 3) Environment variables (production)
+
+Create a `.env` on the server (not in GitHub):
+
+```bash
+sudo nano /var/www/intelligence_systems_site/.env
+```
+
+Add:
+
+```env
+SECRET_KEY=some-long-random-string
+DATABASE_URL=sqlite:////var/www/intelligence_systems_site/instance/site.db
+ADMIN_EMAIL=admin@saveetha.edu.in
+ADMIN_PASSWORD=strong-password
+```
+
+Create instance folder:
+
+```bash
+mkdir -p /var/www/intelligence_systems_site/instance
+```
+
+## 4) Create DB tables once
+
+Run:
+
+```bash
+source .venv/bin/activate
+python -c "from app import create_app; from app.extensions import db; app=create_app(); 
+with app.app_context(): db.create_all(); print('DB OK')"
+```
+
+## 5) Gunicorn systemd service
+
+Create:
+
+```bash
+sudo nano /etc/systemd/system/intelligence_systems.service
+```
+
+Paste:
+
+```ini
+[Unit]
+Description=Intelligence Systems Flask App
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/intelligence_systems_site
+EnvironmentFile=/var/www/intelligence_systems_site/.env
+ExecStart=/var/www/intelligence_systems_site/.venv/bin/gunicorn wsgi:app --bind 127.0.0.1:8000 --workers 2
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable + start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable intelligence_systems.service
+sudo systemctl start intelligence_systems.service
+sudo systemctl status intelligence_systems.service
+```
+
+## 6) Nginx reverse proxy
+
+Create:
+
+```bash
+sudo nano /etc/nginx/sites-available/intelligence_systems
+```
+
+Paste:
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.edu.in;
+
+    location /static/ {
+        alias /var/www/intelligence_systems_site/app/static/;
+        expires 30d;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/intelligence_systems /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+## 7) HTTPS (Let’s Encrypt)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.edu.in
+```
+
+---
+
+# Backups (important if using SQLite)
+
+Daily backup via cron:
+
+```bash
+sudo crontab -e
+```
+
+Add:
+
+```cron
+0 2 * * * cp /var/www/intelligence_systems_site/instance/site.db /var/www/intelligence_systems_site/instance/backups/site_$(date +\%F).db
+```
+
+---
+
+## If you want, I’ll implement visitor counter now
+
+Tell me which you prefer:
+
+1. **Total visitors** (simple “Visitors: 12345”)
+2. **Today + Total** (Today: 52 | Total: 12,345)
+
+I’ll give you the exact `model + before_request + footer snippet` matching your Flask structure.
