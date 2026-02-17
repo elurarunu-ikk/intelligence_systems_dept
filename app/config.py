@@ -1,26 +1,12 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Config:
-    def __call__(self):
-        return self
-
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 
-    # ✅ Render-safe DB config
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///instance/site.db")
 
-    if DATABASE_URL:
-        # Render / production
-        SQLALCHEMY_DATABASE_URI = DATABASE_URL
-    else:
-        # Local / default (SQLite in instance folder)
-        SQLALCHEMY_DATABASE_URI = "sqlite:///instance/site.db"
+    # SQLAlchemy sometimes needs postgresql:// not postgres://
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # Seed admin (dev / review only)
-    ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@saveetha.edu.in")
-    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "ChangeMe@123")
