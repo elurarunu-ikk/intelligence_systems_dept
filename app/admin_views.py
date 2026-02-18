@@ -140,23 +140,34 @@ class GalleryAlbumView(SecureModelView):
     column_sortable_list = ("display_order", "year", "title")
     column_default_sort = ("display_order", True)
 
+    # Manual path input
     form_columns = ("display_order", "title", "category", "year", "is_published", "cover_image_url")
+    form_args = {
+        "cover_image_url": {"validators": [DataRequired()]},  # require path if upload image, comment the line
+    }
 
     # ✅ cover upload
-    form_extra_fields = {
-        "cover_image_url": ImageUploadField(
-            "Album Cover",
-            base_path=lambda: os.path.join(current_app.root_path, "static", "images", "gallery"),
-            url_relative_path="images/gallery/",
-            namegen=lambda obj, file_data: secure_filename(file_data.filename),
-            allowed_extensions=("jpg", "jpeg", "png", "webp"),
-        )
+  #  form_extra_fields = {
+   #     "cover_image_url": ImageUploadField(
+    #        "Album Cover",
+     #       base_path=lambda: os.path.join(current_app.root_path, "static", "images", "gallery"),
+      #      url_relative_path="images/gallery/",
+       #     namegen=lambda obj, file_data: secure_filename(file_data.filename),
+        #    allowed_extensions=("jpg", "jpeg", "png", "webp"), ) }
+
+    form_widget_args = {
+    "cover_image_url": {
+        "placeholder": "/static/images/gallery/yourfile.webp"
     }
+}
 
     def _cover_thumb(self, context, model, name):
         if not model.cover_image_url:
             return ""
-        return Markup(f'<img src="{model.cover_image_url}" style="height:40px;border-radius:6px;">')
+        return Markup(
+            f'<img src="{model.cover_image_url}" '
+            f'style="height:40px;width:auto;border-radius:6px;object-fit:cover;">'
+        )
 
     column_formatters = {"cover_image_url": _cover_thumb}
 
