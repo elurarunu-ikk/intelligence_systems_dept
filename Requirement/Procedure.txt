@@ -1,0 +1,71 @@
+(.venv) PS D:\intelligence_systems_site> $env:DATABASE_URL="postgresql://intelligence_systems_site_user:KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN@dpg-d69valpr0fns738akab0-a.oregon-postgres.render.com/intelligence_systems_site" 
+flask --app wsgi:app db upgrade
+# Set DB to Postgres for this session
+
+
+# Run migrations into Postgres
+flask --app wsgi:app db upgrade
+
+>> python scripts/sqlite_to_postgres.py
+
+
+
+
+$env:DATABASE_URL="postgresql://intelligence_systems_site_user:KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN@dpg-d69valpr0fns738akab0-a.oregon-postgres.render.com/intelligence_systems_site"
+flask --app wsgi:app run
+$env:SQLITE_OLD_PATH="D:\intelligence_systems_site\instance\site_old.db"
+python scripts/sqlite_to_postgres.py
+
+
+YOUR_RENDER_OR_LOCAL_POSTGRES_URL ---where i can get.
+
+.env
+FLASK_ENV=development
+SECRET_KEY=change-this-in-production
+DATABASE_URL=sqlite:///site.db
+ADMIN_EMAIL=admin@saveetha.edu.in
+ADMIN_PASSWORD=ChangeMe@123
+
+
+
+Internal Database URL: postgresql://intelligence_systems_site_user:KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN@dpg-d69valpr0fns738akab0-a/intelligence_systems_site
+External Database URL: postgresql://intelligence_systems_site_user:KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN@dpg-d69valpr0fns738akab0-a.oregon-postgres.render.com/intelligence_systems_site
+
+Hostname: dpg-d69valpr0fns738akab0-a
+port: 5432
+Database intelligence_systems_site
+Username: intelligence_systems_site_user
+Password: KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN
+PSQL Command: PGPASSWORD=KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN psql -h dpg-d69valpr0fns738akab0-a.oregon-postgres.render.com -U intelligence_systems_site_user intelligence_systems_site
+
+In Render web service
+DATABASE_URL = postgresql://intelligence_systems_site_user:KJnUPVoaPz3g0SN1iGyIY2Gr6TDj0tRN@dpg-d69valpr0fns738akab0-a/intelligence_systems_site
+SECRET_KEY = strong value (Auto geenrate)
+ADMIN_EMAIL=admin@saveetha.edu.in
+ADMIN_PASSWORD=ChangeMe@123
+
+Setting; Start command
+python -m flask --app wsgi:app db upgrade && gunicorn wsgi:app
+
+git add app/configbackup.py
+git commit -m "Add configbackup for deployment"
+git push origin main
+
+git add app/static/images/gallery/INTELSEC-2026-6.webp
+git commit -m "Add image for deployment"
+git push origin main
+
+git add app/models.py app/templates/public/gallery_album.html
+git commit -m "Gallery image SlideShow"
+git push origin main
+
+$env:DATABASE_URL="postgresql://intelligence_systems_site_user:...@dpg-d69valpr0fns738akab0-a.oregon-postgres.render.com/intelligence_systems_site"
+flask --app wsgi:app run
+
+git add  app/static/images/gallery/INTELSEC-2026-01.webp 
+        app/static/images/gallery/INTELSEC-2026-7.webp
+        app/static/images/gallery/INTELSEC-2026-8.webp
+        app/static/images/gallery/INTELSEC-2026-9.webp
+        app/static/images/gallery/IV-2026-01.webp
+        app/static/images/gallery/IV-2026-02.webp
+        app/static/images/gallery/IV-2026-03.webp

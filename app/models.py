@@ -155,6 +155,7 @@ class GalleryAlbum(db.Model, TimestampMixin):
     year = db.Column(db.String(10), default="2025", nullable=False)
     cover_image_url = db.Column(db.String(500), default="", nullable=True)
     is_published = db.Column(db.Boolean, default=True, nullable=False)
+    display_order = db.Column (db.Integer, default=1, nullable=False)
 
     def __str__(self):
         return self.title
@@ -164,8 +165,12 @@ class GalleryImage(db.Model, TimestampMixin):
     album_id = db.Column(db.Integer, db.ForeignKey("gallery_album.id"), nullable=False)
     image_url = db.Column(db.String(500), nullable=False)
     caption = db.Column(db.String(255), default="", nullable=True)
+    display_order = db.Column (db.Integer, default=1, nullable=False)
 
-    album = db.relationship("GalleryAlbum", backref=db.backref("images", lazy=True,order_by="GalleryImage.id.asc()"))
+    album = db.relationship("GalleryAlbum", 
+                            backref=db.backref(
+                                "images", lazy=True,
+                                 order_by="GalleryImage.display_order.asc()"))
 
 class Alumni(db.Model, TimestampMixin):
     id = db.Column(db.Integer, primary_key=True)

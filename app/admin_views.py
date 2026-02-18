@@ -1,8 +1,13 @@
-from flask import redirect, url_for, request
+import os
+from flask import current_app,redirect, url_for, request
 from flask_login import current_user
-from flask_admin import AdminIndexView
+from flask_admin import AdminIndexView,form
 from app.models import HeroSlide
 from flask_admin.contrib.sqla import ModelView
+from wtforms.validators import DataRequired
+from flask_admin.form.upload import ImageUploadField
+from werkzeug.utils import secure_filename
+from markupsafe import Markup
 from wtforms.validators import DataRequired
 
 from .extensions import db
@@ -57,18 +62,12 @@ def setup_admin(admin):
     admin.add_view(SecureModelView(Enquiry, db.session, category="Enquiries"))
     admin.add_view(SecureModelView(User, db.session, category="Access"))
 
-    admin.add_view(SecureModelView(GalleryAlbum, db.session, category="Media"))
-    admin.add_view(GalleryImageView(GalleryImage, db.session, category="Media"))
+   # admin.add_view(SecureModelView(GalleryAlbum, db.session, category="Media"))
+   # admin.add_view(GalleryImageView(GalleryImage, db.session, category="Media"))
  
    # admin.add_view(SecureModelView(Alumni, db.session, category="People"))
-   
-
-
-import os
-from flask import current_app, url_for
-from flask_admin import form
-from flask_admin.form.upload import ImageUploadField
-from werkzeug.utils import secure_filename
+    admin.add_view(GalleryAlbumView(GalleryAlbum, db.session, category="Media"))
+    admin.add_view(GalleryImageView(GalleryImage, db.session, category="Media"))
 
 # --- HeroSlide admin with image upload ---
 class HeroSlideAdmin(SecureModelView):
@@ -136,12 +135,71 @@ class FacultyView(SecureModelView):
 
         super().on_model_change(form, model, is_created)
 
+class GalleryAlbumView(SecureModelView):
+    column_list = ("display_order", "title", "category", "year", "is_published", "cover_image_url")
+    column_sortable_list = ("display_order", "year", "title")
+    column_default_sort = ("display_order", True)
+
+    form_columns = ("display_order", "title", "category", "year", "is_published", "cover_image_url")
+
+    # ✅ cover upload
+    form_extra_fields = {
+        "cover_image_url": ImageUploadField(
+            "Album Cover",
+            base_path=lambda: os.path.join(current_app.root_path, "static", "images", "gallery"),
+            url_relative_path="images/gallery/",
+            namegen=lambda obj, file_data: secure_filename(file_data.filename),
+            allowed_extensions=("jpg", "jpeg", "png", "webp"),
+        )
+    }
+
+    def _cover_thumb(self, context, model, name):
+        if not model.cover_image_url:
+            return ""
+        return Markup(f'<img src="{model.cover_image_url}" style="height:40px;border-radius:6px;">')
+
+    column_formatters = {"cover_image_url": _cover_thumb}
+
+
 class GalleryImageView(SecureModelView):
-    form_columns = ("album", "image_url", "caption")
+    column_list = ("display_order", "album", "image_url", "caption")
+    column_sortable_list = ("display_order", "album", "caption")
+    column_default_sort = ("display_order", True)
+
+    # keep as text input (manual path) "jpg", "jpeg", "png", "webp"
+    form_columns = ("album", "display_order", "image_url", "caption")
+
+    # ✅ image upload (browse)
+   #    form_extra_fields = {
+   #       "image_url": ImageUploadField(
+   #           "Gallery Image",
+    #        base_path=lambda: os.path.join(current_app.root_path, "static", "images", "gallery"),
+     #       url_relative_path="images/gallery/",
+      #      namegen=lambda obj, file_data: secure_filename(file_data.filename),
+       #     allowed_extensions=("jpg", "jpeg", "png", "webp"),) }
+
     form_args = {
         "album": {"get_label": "title"},
-        "image_url": {"validators": [DataRequired()]},
+        "image_url": {"validators": [DataRequired()]},  # require path if upload image, comment the line
     }
+
+    form_widget_args = {
+    "image_url": {
+        "placeholder": "/static/images/gallery/yourfile.webp"
+    }
+}
+
+
+    def _img_thumb(self, context, model, name):
+        if not model.image_url:
+            return ""
+        return Markup(
+            f'<img src="{model.image_url}" '
+            f'style="height:40px;width:auto;border-radius:6px;object-fit:cover;">'
+        )
+
+    column_formatters = {"image_url": _img_thumb}
+
 
    
 class PageView(SecureModelView):
