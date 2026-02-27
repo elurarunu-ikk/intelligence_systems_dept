@@ -47,7 +47,8 @@ def setup_admin(admin):
    # admin.add_view(SiteSettingsAdmin(SiteSettings, db.session, category="Settings")) # --Added 24JAn2026
     admin.add_view(SecureModelView(Page, db.session, category="Content"))
   #  admin.add_view(SecureModelView(Program, db.session, category="Academics"))
-    admin.add_view(SecureModelView(Faculty, db.session, category="Faculty"))
+    #admin.add_view(SecureModelView(Faculty, db.session, category="Faculty"))
+    admin.add_view(FacultyView(Faculty, db.session, category="Faculty"))
 
     admin.add_view(SecureModelView(News, db.session, category="News & Media"))
     admin.add_view(SecureModelView(Event, db.session, category="News & Media"))
@@ -71,53 +72,106 @@ def setup_admin(admin):
 
 # --- HeroSlide admin with image upload ---
 class HeroSlideAdmin(SecureModelView):
-    form_extra_fields = {
-        "image_url": ImageUploadField(
-            "Slide Image",
-            base_path=lambda: os.path.join(current_app.root_path, "static", "images", "headers"),
-            url_relative_path="images/headers/",
-            namegen=lambda obj, file_data: secure_filename(file_data.filename),
-            allowed_extensions=("jpg", "jpeg", "png", "webp"),
-        )
+
+    column_list = ("order","title", "image_url", "is_active")
+    column_sortable_list = ("order", "title", "is_active")
+    column_default_sort = ("order", True)
+
+    form_columns = ("order", "title", "subtitle", "image_url", "cta_text", "cta_url", "is_active")
+
+
+	#form_extra_fields = {
+	#		"image_url": ImageUploadField(
+	#			"Slide Image",
+	#			base_path=lambda: os.path.join(current_app.root_path, "static", "images", "headers"),
+	#			url_relative_path="images/headers/",
+	#			namegen=lambda obj, file_data: secure_filename(file_data.filename),
+	#			allowed_extensions=("jpg", "jpeg", "png", "webp"),
+	#		)
+	#	}
+
+
+    form_widget_args = {
+        "image_url": {
+            "placeholder": "/static/images/headers/slide1.webp"
+        }
     }
+
+    form_args = {
+        "image_url": {"validators": [DataRequired()]},
+    }
+
+    def _img_thumb(self, context, model, name):
+        if not model.image_url:
+            return ""
+        return Markup(
+            f'<img src="{model.image_url}" '
+            f'style="height:40px;width:auto;border-radius:6px;object-fit:cover;">'
+        )
+
+    column_formatters = {"image_url": _img_thumb}
 
     def on_model_change(self, form, model, is_created):
         if model.image_url:
-            v = str(model.image_url).strip()
+            v = str(model.image_url).strip().replace("\\", "/")
 
-            # Case 1: already a full static path
-            if v.startswith("/static/"):
-                model.image_url = v
+            # If only filename given
+            if "/" not in v:
+                v = f"images/headers/{v}"
 
-            # Case 2: field returns only filename like 'about.jpg' (no slashes)
-            elif "/" not in v and "\\" not in v:
-                model.image_url = f"/static/images/headers/{v}"
+            # Ensure /static prefix
+            if not v.startswith("/static/"):
+                v = "/static/" + v.lstrip("/")
 
-            # Case 3: field returns relative path like 'images/headers/about.jpg'
-            else:
-                v = v.replace("\\", "/")
-                model.image_url = "/static/" + v.lstrip("/")
+            model.image_url = v
 
         super().on_model_change(form, model, is_created)
-
     
    
 class FacultyView(SecureModelView):
+    column_list = ("display_order", "name", "designation", "photo_url", "is_published")
+    column_sortable_list = ("display_order", "name", "designation", "is_published")
+    column_default_sort = ("display_order", True)
+
     form_columns = (
-        "name","designation","display_order","specialization",
-        "email","phone","photo_url","bio_html","is_published",
+        "display_order",
+        "name",
+        "designation",
+        "specialization",
+        "email",
+        "phone",
+        "photo_url",
+        "bio_html",
+        "is_published",
     )
+    
+    form_widget_args = {
+        "photo_url": {"placeholder": "/static/images/faculty/john_doe.webp"}
+    }
+
 
     # Upload into: app/static/images/faculty/
-    form_extra_fields = {
-        "photo_url": ImageUploadField(
-            "Faculty Photo",
-            base_path=lambda: os.path.join(current_app.root_path, "static", "images", "faculty"),
-            url_relative_path="images/faculty/",
-            namegen=lambda obj, file_data: secure_filename(file_data.filename),
-            allowed_extensions=("jpg", "jpeg", "png", "webp"),
+    # form_extra_fields = {
+    #     "photo_url": ImageUploadField(
+    #         "Faculty Photo",
+    #         base_path=lambda: os.path.join(current_app.root_path, "static", "images", "faculty"),
+    #         url_relative_path="images/faculty/",
+    #         namegen=lambda obj, file_data: secure_filename(file_data.filename),
+    #         allowed_extensions=("jpg", "jpeg", "png", "webp"),
+    #     )
+    # }
+
+     # ✅ IMPORTANT: formatter signature must be (view, context, model, name)
+    def _photo_thumb(view, context, model, name):
+        if not getattr(model, "photo_url", None):
+            return ""
+        return Markup(
+            f'<img src="{model.photo_url}" '
+            f'style="height:40px;width:40px;border-radius:6px;object-fit:cover;">'
         )
-    }
+
+    column_formatters = {"photo_url": _photo_thumb}
+    column_formatters_detail = {"photo_url": _photo_thumb}  # optional: detail page too
 
     def on_model_change(self, form, model, is_created):
         if model.photo_url:
