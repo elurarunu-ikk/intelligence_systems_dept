@@ -45,13 +45,16 @@ def setup_admin(admin):
     admin.add_view(SecureModelView(SiteSettings, db.session, category="Settings")) 
     admin.add_view(HeroSlideAdmin(HeroSlide, db.session, category="Content"))
    # admin.add_view(SiteSettingsAdmin(SiteSettings, db.session, category="Settings")) # --Added 24JAn2026
-    admin.add_view(SecureModelView(Page, db.session, category="Content"))
+   # admin.add_view(SecureModelView(Page, db.session, category="Content"))
+    admin.add_view(PageView(Page, db.session, category="Content"))
   #  admin.add_view(SecureModelView(Program, db.session, category="Academics"))
     #admin.add_view(SecureModelView(Faculty, db.session, category="Faculty"))
     admin.add_view(FacultyView(Faculty, db.session, category="Faculty"))
 
-    admin.add_view(SecureModelView(News, db.session, category="News & Media"))
-    admin.add_view(SecureModelView(Event, db.session, category="News & Media"))
+    # admin.add_view(SecureModelView(News, db.session, category="News & Media"))
+    admin.add_view(NewsView(News, db.session, category="News & Media"))
+    # admin.add_view(SecureModelView(Event, db.session, category="News & Media"))
+    admin.add_view(EventView(Event, db.session, category="News & Media"))
    # admin.add_view(SecureModelView(Newsletter, db.session, category="News & Media"))
 
     admin.add_view(SecureModelView(Achievement, db.session, category="Highlights"))
@@ -267,7 +270,20 @@ class GalleryImageView(SecureModelView):
 
 
    
+from markupsafe import Markup
+from wtforms.validators import DataRequired
+
 class PageView(SecureModelView):
+    # ✅ only few columns in list
+    column_list = ("title", "slug", "is_published", "show_in_menu")
+    column_sortable_list = ("title", "slug", "is_published", "show_in_menu")
+    column_searchable_list = ("title", "slug")
+    column_default_sort = ("title", True)
+
+    # ✅ do not show big fields in list
+    column_exclude_list = ("body_html", "created_at", "updated_at")
+
+    # ✅ keep in form (edit page needs body_html)
     form_columns = (
         "title",
         "slug",
@@ -277,6 +293,22 @@ class PageView(SecureModelView):
         "is_published",
         "show_in_menu",
     )
+
+    form_widget_args = {
+        "header_image_url": {"placeholder": "/static/images/headers/page_header.webp"}
+    }
+
+    def on_model_change(self, form, model, is_created):
+        # normalize header image path
+        if getattr(model, "header_image_url", None):
+            v = str(model.header_image_url).strip().replace("\\", "/")
+            if v:
+                if "/" not in v:
+                    v = f"images/headers/{v}"
+                if not v.startswith("/static/"):
+                    v = "/static/" + v.lstrip("/")
+            model.header_image_url = v
+        super().on_model_change(form, model, is_created)
 
     
 from flask_admin.form import rules
@@ -302,13 +334,108 @@ class SiteSettingsAdmin(SecureModelView):
         "enquiry_email","phone","address",
     )
 
-class NewsView(SecureModelView):
+""" class NewsView(SecureModelView):
     def on_model_change(self, form, model, is_created):
         if model.cover_image_url:
             v = str(model.cover_image_url).strip().replace("\\", "/")
             if v and not v.startswith("/"):
                 v = "/" + v
             model.cover_image_url = v
+        super().on_model_change(form, model, is_created) """
+
+
+from markupsafe import Markup
+from wtforms.validators import DataRequired
+
+class NewsView(SecureModelView):
+    column_list = ("published_on", "title", "summary", "is_published")
+    column_sortable_list = ("published_on", "title", "is_published")
+    column_searchable_list = ("title",)
+    column_default_sort = ("published_on", True)
+
+    column_exclude_list = ("body_html", "created_at", "updated_at")
+
+    # adjust field names if your model differs
+    form_columns = (
+        "title",
+        "slug",              # if exists; remove if your News model has no slug
+        "published_on",      # if exists; else use "date"
+        "cover_image_url",
+        "summary",           # if exists; else remove
+        "body_html",
+        "is_published",
+    )
+
+    form_widget_args = {
+        "cover_image_url": {"placeholder": "/static/images/news/news1.webp"}
+    }
+
+    def _cover_thumb(view, context, model, name):
+        if not getattr(model, "cover_image_url", None):
+            return ""
+        return Markup(
+            f'<img src="{model.cover_image_url}" '
+            f'style="height:40px;width:70px;border-radius:6px;object-fit:cover;">'
+        )
+
+    column_formatters = {"cover_image_url": _cover_thumb}
+
+    def on_model_change(self, form, model, is_created):
+        if model.cover_image_url:
+            v = str(model.cover_image_url).strip().replace("\\", "/")
+
+            # filename only -> images/news/...
+            if "/" not in v:
+                v = f"images/news/{v}"
+
+            # ensure /static prefix
+            if not v.startswith("/static/"):
+                v = "/static/" + v.lstrip("/")
+
+            model.cover_image_url = v
+
         super().on_model_change(form, model, is_created)
 
+        from markupsafe import Markup
 
+class EventView(SecureModelView):
+    column_list = ("starts_at", "title", "location", "is_published")
+    column_sortable_list = ("starts_at", "title","location", "is_published")
+    column_searchable_list = ("title","starts_at","location")
+    column_default_sort = ("starts_at", True)
+
+    column_exclude_list = ("description_html", "created_at", "updated_at")
+
+    form_columns = (
+        "title",
+        "location",              # if exists; remove if not
+        "starts_at",        # if your model uses different field name, change it
+        "ends_at",          # if exists
+        "registration_link",
+        "description_html",
+        "is_published",
+    )
+    # the below portion is Not required for Event View
+    """ form_widget_args = {
+        "cover_image_url": {"placeholder": "/static/images/events/event1.webp"}
+    }
+
+    def _cover_thumb(view, context, model, name):
+        if not getattr(model, "cover_image_url", None):
+            return ""
+        return Markup(
+            f'<img src="{model.cover_image_url}" '
+            f'style="height:40px;width:70px;border-radius:6px;object-fit:cover;">'
+        )
+
+    column_formatters = {"cover_image_url": _cover_thumb}
+
+    def on_model_change(self, form, model, is_created):
+        if model.cover_image_url:
+            v = str(model.cover_image_url).strip().replace("\\", "/")
+            if "/" not in v:
+                v = f"images/events/{v}"
+            if not v.startswith("/static/"):
+                v = "/static/" + v.lstrip("/")
+            model.cover_image_url = v
+        super().on_model_change(form, model, is_created) """
