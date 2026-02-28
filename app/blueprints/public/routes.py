@@ -34,7 +34,7 @@ def home():
     programs_res = Program.query.filter_by(level="Research", is_published=True).all()
 
     news = News.query.filter_by(is_published=True).order_by(desc(News.published_on)).limit(4).all()
-    events = Event.query.filter_by(is_published=True).order_by(Event.starts_at.asc()).limit(4).all()
+    events = Event.query.filter_by(is_published=True).order_by(Event.starts_at.desc()).limit(4).all()
     achievements = Achievement.query.filter_by(is_published=True).order_by(desc(Achievement.is_featured), desc(Achievement.created_at)).limit(6).all()
     mous = MoU.query.filter_by(is_published=True).limit(8).all()
     placement_stats = PlacementStat.query.filter_by(is_visible=True).limit(6).all()
@@ -160,7 +160,7 @@ def news_detail(slug: str):
 @public_bp.get("/events")
 def events_list():
     settings = get_settings()
-    items = Event.query.filter_by(is_published=True).order_by(Event.starts_at.asc()).all()
+    items = Event.query.filter_by(is_published=True).order_by(Event.starts_at.desc()).all()
     return render_template("public/events_list.html", 
                            settings=settings, 
                            items=items,
